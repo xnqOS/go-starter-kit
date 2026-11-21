@@ -1,0 +1,51 @@
+# Local environment and credentials; keep configuration examples.
+.env*
+!.env.example
+!.env.deploy.example
+/.aws/
+*.pem
+*.key
+*.p12
+*.pfx
+/deploy/log-server/certs/
+
+# Go build output, runtime data, backups and test artifacts.
+/bin/
+/data/
+/backups/
+/coverage/
+/api
+/migrate
+/modulegen
+/projectinit
+*.test
+coverage*.out
+coverage*.html
+*.prof
+*.pprof
+*.trace
+
+# Local databases and their journal/WAL files.
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Logs and temporary files.
+*.log
+*.tmp
+.modulegen.lock
+.projectinit.lock
+
+# Editor and operating-system files.
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,98 @@
+package {{.Package}}
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/xnqOS/go-starter-kit/kit/apperror"
+)
+
+type failingRepo struct{ Repo }
+
+func (failingRepo) Create(context.Context, {{.Type}}) error { return errors.New("storage unavailable") }
+
+func TestServiceValidationAndStorageFailure(t *testing.T) {
+	ctx := context.Background()
+	service := NewService(failingRepo{})
+	for _, name := range []string{"", "   ", strings.Repeat("界", 201)} {
+		if _, err := service.Create(ctx, name); !errors.Is(err, apperror.ErrInvalid) {
+			t.Fatalf("name %q: expected validation error, got %v", name, err)
+		}
+	}
+	if _, err := service.Create(ctx, "valid"); err == nil || errors.Is(err, apperror.ErrInvalid) {
+		t.Fatalf("expected storage failure, got %v", err)
+	}
+	for _, params := range []ListParams{ {Limit: -1}, {Limit: 101}, {Offset: -1} } {
+		if _, err := service.List(ctx, params); !errors.Is(err, apperror.ErrInvalid) {
+			t.Fatalf("invalid pagination accepted: %+v", params)
+		}
+	}
+}
+
+func TestMemoryCRUDAndPagination(t *testing.T) {
+	ctx := context.Background()
+	service := NewService(NewMemoryRepo())
+	// Each call gets a later time, so "newest first" ordering is deterministic.
+	clock := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	service.now = func() time.Time {
+		clock = clock.Add(time.Second)
+		return clock
+	}
+	first, err := service.Create(ctx, "  first  ")
+	if err != nil || first.Name != "first" || first.ID == "" {
+		t.Fatalf("create: %+v %v", first, err)
+	}
+	second, err := service.Create(ctx, "second")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := service.List(ctx, ListParams{Limit: 1})
+	if err != nil || len(result.Items) != 1 || result.Items[0].ID != second.ID || result.Total != 2 || result.Limit != 1 || result.Offset != 0 {
+		t.Fatalf("list: %+v %v", result, err)
+	}
+	result, err = service.List(ctx, ListParams{Limit: 1, Offset: 1})
+	if err != nil || len(result.Items) != 1 || result.Items[0].ID != first.ID || result.Total != 2 || result.Offset != 1 {
+		t.Fatalf("offset: %+v %v", result, err)
+	}
+	result, err = service.List(ctx, ListParams{Offset: 99})
+	if err != nil || len(result.Items) != 0 || result.Items == nil || result.Total != 2 || result.Limit != 20 || result.Offset != 99 {
+		t.Fatalf("empty list: %+v %v", result, err)
+	}
+	updated, err := service.Update(ctx, first.ID, " renamed ")
+	if err != nil || updated.Name != "renamed" || !updated.CreatedAt.Equal(first.CreatedAt) {
+		t.Fatalf("update: %+v %v", updated, err)
+	}
+	if err := service.Delete(ctx, first.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Get(ctx, first.ID); !errors.Is(err, apperror.ErrNotFound) {
+		t.Fatalf("get after delete: %v", err)
+	}
+	if err := service.Delete(ctx, first.ID); !errors.Is(err, apperror.ErrNotFound) {
+		t.Fatalf("delete missing: %v", err)
+	}
+	if _, err := service.Update(ctx, first.ID, "name"); !errors.Is(err, apperror.ErrNotFound) {
+		t.Fatalf("update missing: %v", err)
+	}
+}
+
+func TestMemoryConcurrentCreates(t *testing.T) {
+	service := NewService(NewMemoryRepo())
+	var wg sync.WaitGroup
+	for range 30 {
+		wg.Go(func() {
+			if _, err := service.Create(context.Background(), "parallel"); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	wg.Wait()
+	result, err := service.List(context.Background(), ListParams{Limit: 100})
+	if err != nil || len(result.Items) != 30 || result.Total != 30 {
+		t.Fatalf("concurrent creates lost: %+v %v", result, err)
+	}
+}

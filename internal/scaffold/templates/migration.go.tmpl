@@ -1,0 +1,20 @@
+package migrations
+
+import (
+    "time"
+
+    "gorm.io/gorm"
+)
+
+// This snapshot is immutable after application. Do not import the live model.
+type {{.Package}}V{{.Version}} struct {
+    ID string `gorm:"primaryKey;type:text;index:{{.Table}}_created_at_idx,sort:desc,priority:2"`
+    Name string `gorm:"not null;type:text;check:{{.Table}}_name_check,length(name) BETWEEN 1 AND 200"`
+    CreatedAt time.Time `gorm:"not null;autoCreateTime:false;index:{{.Table}}_created_at_idx,sort:desc,priority:1"`
+    UpdatedAt time.Time `gorm:"not null;autoUpdateTime:false"`
+}
+func ({{.Package}}V{{.Version}}) TableName() string { return "{{.Table}}" }
+
+func create{{.Type}}V{{.Version}}(tx *gorm.DB) error {
+    return tx.Migrator().CreateTable(&{{.Package}}V{{.Version}}{})
+}

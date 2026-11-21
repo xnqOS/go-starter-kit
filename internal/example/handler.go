@@ -1,0 +1,68 @@
+package example
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/xnqOS/go-starter-kit/kit/httpx"
+	"github.com/xnqOS/go-starter-kit/kit/logging"
+)
+
+type Handler struct{ service *Service }
+
+func NewHandler(service *Service) *Handler { return &Handler{service: service} }
+
+func (h *Handler) Create(c *gin.Context) {
+	var req CreateRequest
+	if !httpx.DecodeJSON(c, &req) {
+		return
+	}
+	item, err := h.service.Create(c.Request.Context(), req.Name)
+	if err != nil {
+		httpx.Fail(c, err)
+		return
+	}
+	logging.FromContext(c.Request.Context()).InfoContext(c.Request.Context(), "example created", "module", "example", "id", item.ID)
+	c.Header("Location", c.Request.URL.Path+"/"+item.ID)
+	httpx.Data(c, http.StatusCreated, item)
+}
+
+func (h *Handler) Get(c *gin.Context) {
+	item, err := h.service.Get(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		httpx.Fail(c, err)
+		return
+	}
+	httpx.Data(c, http.StatusOK, item)
+}
+
+func (h *Handler) List(c *gin.Context) {
+	query, ok := httpx.ParseListParams(c)
+	if !ok {
+		return
+	}
+	result, err := h.service.List(c.Request.Context(), ListParams{Limit: query.Limit, Offset: query.Offset})
+	httpx.PageResult(c, result.Items, httpx.Pagination{Limit: result.Limit, Offset: result.Offset, Total: result.Total}, err)
+}
+
+func (h *Handler) Update(c *gin.Context) {
+	var req UpdateRequest
+	if !httpx.DecodeJSON(c, &req) {
+		return
+	}
+	item, err := h.service.Update(c.Request.Context(), c.Param("id"), req.Name)
+	if err != nil {
+		httpx.Fail(c, err)
+		return
+	}
+	httpx.Data(c, http.StatusOK, item)
+}
+
+func (h *Handler) Delete(c *gin.Context) {
+	if err := h.service.Delete(c.Request.Context(), c.Param("id")); err != nil {
+		httpx.Fail(c, err)
+		return
+	}
+	httpx.NoContent(c)
+}

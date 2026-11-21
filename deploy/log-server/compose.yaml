@@ -1,0 +1,22 @@
+name: starter-log-server
+
+services:
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.52.0
+    restart: unless-stopped
+    command:
+      - "-storageDataPath=/victoria-logs-data"
+      - "-retentionPeriod=14d"
+      - "-syslog.listenAddr.tcp=:6514"
+      - "-syslog.tls"
+      - "-syslog.tlsCertFile=/certs/server.crt"
+      - "-syslog.tlsKeyFile=/certs/server.key"
+    ports:
+      - "${LOG_SERVER_BIND_IP:-127.0.0.1}:6514:6514"
+      - "127.0.0.1:9428:9428"
+    volumes:
+      - logs_data:/victoria-logs-data
+      - ./certs:/certs:ro
+
+volumes:
+  logs_data:

@@ -1,0 +1,37 @@
+x-app: &app
+  image: ${IMAGE_NAME:-starter-kit:local}
+  build:
+    context: .
+  env_file:
+    - .env.deploy
+  volumes:
+    - app_data:/app/data
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  migrate:
+    <<: *app
+    profiles: ["tools"]
+    command: ["/app/migrate"]
+    restart: "no"
+
+  api:
+    <<: *app
+    command: ["/app/api"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+    stop_grace_period: 15s
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "--max-time", "3", "http://127.0.0.1:8080/ready"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  app_data:

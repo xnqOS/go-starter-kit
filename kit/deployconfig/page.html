@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>部署配置</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #5d6677; --line: #e1e4ea;
+    --red: #c62f2f; --red-bg: #fdecec; --amber: #9a6400; --amber-bg: #fff4dc;
+    --green: #1f7a45; --green-bg: #e5f5ec; --blue: #2457c5; --code: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c; --card: #1c2027; --text: #e6e8ec; --muted: #9aa3b2; --line: #2d333d;
+      --red: #ff8a8a; --red-bg: #3a1f22; --amber: #f2c46b; --amber-bg: #3a2f17;
+      --green: #7fd6a2; --green-bg: #183126; --blue: #8fb1ff; --code: #262b33;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 20px 120px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  a { color: var(--blue); }
+  .muted { color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+  details > summary { cursor: pointer; font-weight: 600; }
+  .summary { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .pill.required { background: var(--red-bg); color: var(--red); }
+  .pill.recommended { background: var(--amber-bg); color: var(--amber); }
+  .pill.ok { background: var(--green-bg); color: var(--green); }
+  .pill.optional { background: var(--code); color: var(--muted); }
+  .startup { flex: 1 1 100%; font-size: 14px; }
+  .startup.bad { color: var(--red); }
+  .startup.good { color: var(--green); }
+  .var { border-top: 1px solid var(--line); padding: 14px 0; }
+  .var:first-of-type { border-top: 0; }
+  .var-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .var-name { font-weight: 700; }
+  .reason { font-size: 14px; margin-top: 4px; }
+  .reason.required { color: var(--red); }
+  .reason.recommended { color: var(--amber); }
+  .help { font-size: 14px; color: var(--muted); margin: 4px 0 8px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row input, .row select { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  button { padding: 7px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--text); font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap; }
+  button:hover { border-color: var(--blue); }
+  button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .where { margin-top: 8px; font-size: 14px; background: var(--code); border-radius: 6px; padding: 8px 12px; }
+  .where ol { margin: 6px 0 0; padding-left: 20px; }
+  .hidden { display: none !important; }
+  pre { background: var(--code); padding: 12px; border-radius: 6px; overflow: auto; font-size: 13px; max-height: 480px; }
+  .actions { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--line); padding: 12px 20px; }
+  .actions-inner { max-width: 980px; margin: 0 auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .toast { font-size: 14px; }
+  ul.tight { margin: 6px 0; padding-left: 20px; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">部署配置</h1>
+  <div class="muted">正在编辑 <code id="path">…</code> <span id="newfile" class="hidden">（文件还不存在，已经从 .env.deploy.example 和线上建议值填好了初始内容）</span></div>
+
+  <details class="card" id="intro">
+    <summary>这个文件是做什么的？</summary>
+    <ul class="tight">
+      <li><code>.env.deploy</code> 是线上 API 容器的全部配置。<code>make deploy</code> 用 <code>compose.deploy.yaml</code> 启动容器时把它作为环境变量读进去。它和本地开发用的 <code>.env</code> 是两个文件。</li>
+      <li>里面有密钥，<strong>不要提交到 Git</strong>，也不要发到聊天里。这个页面只在本机 <code>127.0.0.1</code> 上运行，地址里的 <code>?t=…</code> 是一次性口令。</li>
+      <li>改完后在服务器上重新执行 <code>make deploy</code> 才会生效。只改配置不改代码也要执行。</li>
+      <li>标为「必填」的不填，API 起不来，或者已经打开的功能没法用。标为「建议」的不填也能启动，但线上会有问题。</li>
+      <li>「生成」按钮在本机生成随机密钥，和 <code>openssl rand</code> 的效果一样。<strong>标明「不要更换」的密钥生成一次以后就不要再换</strong>：换了会导致已加密的数据读不出来。</li>
+      <li>第三方的 key 在每一项下面的「去哪里拿」里写了网址和步骤。</li>
+      <li>顶部的「API 启动检查」直接调用 API 自己的启动校验（项目配置了的话），结果和 <code>make deploy</code> 时一样。</li>
+      <li>保存时，如果文件已经存在，旧文件会先备份成 <code>.env.deploy.bak-时间</code>。备份里也有密钥，检查完就删掉。原文件里的注释不会保留；这个页面不认识的变量会原样放在文件最后。</li>
+    </ul>
+  </details>
+
+  <div class="summary" id="summary">
+    <span class="pill required" id="count-required">必填 0</span>
+    <span class="pill recommended" id="count-recommended">建议 0</span>
+    <label style="font-size:14px"><input type="checkbox" id="show-advanced"> 显示全部高级设置</label>
+    <div class="startup" id="startup">检查中…</div>
+  </div>
+
+  <div class="card hidden" id="problems-card" style="border-color:var(--red)">
+    <h2 style="color:var(--red)">现有文件有无法准确读取的行，暂时不能保存</h2>
+    <div class="help">下面这些写法的含义和 Compose 实际读到的可能不一样（例如 <code>$变量</code> 会在部署时被替换）。为了不悄悄改掉现在线上用的值，先用编辑器手动改好这些行，再重新打开本页面。</div>
+    <ul class="tight mono" id="problems"></ul>
+  </div>
+
+  <div id="groups"></div>
+
+  <div class="card hidden" id="unknown-card">
+    <h2>其他变量</h2>
+    <div class="help">这些变量这个页面不认识，保存时会原样保留：<span id="unknown" class="mono"></span>。如果是不再使用的旧变量，可以在保存后的文件里手动删掉。</div>
+  </div>
+
+  <details class="card hidden" id="notes-card">
+    <summary>.env.deploy 以外的部署准备</summary>
+    <ul class="tight" id="notes"></ul>
+  </details>
+
+  <div class="card hidden" id="preview-card">
+    <h2>将要写入的内容</h2>
+    <pre id="preview"></pre>
+  </div>
+
+  <div class="card hidden" id="done-card">
+    <h2>已保存</h2>
+    <div id="done"></div>
+  </div>
+</main>
+
+<div class="actions">
+  <div class="actions-inner">
+    <button id="preview-btn">预览文件</button>
+    <button class="primary" id="save-btn">保存到 .env.deploy</button>
+    <span class="toast" id="toast"></span>
+  </div>
+</div>
+
+<script>
+"use strict";
+// Keep the one-time token out of the address bar (and history) but survive reloads.
+const token = new URLSearchParams(location.search).get("t") || sessionStorage.getItem("deploy-config-token") || "";
+sessionStorage.setItem("deploy-config-token", token);
+history.replaceState(null, "", location.pathname);
+let vars = [], values = {}, issues = {}, checkTimer = null, blocked = false, nextSteps = "";
+
+async function call(path, body) {
+  const res = await fetch(path, {
+    method: body === undefined && path === "/api/state" ? "GET" : "POST",
+    headers: { "X-Token": token, "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const child of children.flat()) {
+    if (child == null || child === false) continue;
+    node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+
+function renderVar(v) {
+  const current = values[v.name] || "";
+  let input;
+  if (v.options && v.options.length) {
+    input = el("select", { id: "in-" + v.name });
+    const opts = v.options.includes(current) || current === "" ? v.options : [current, ...v.options];
+    input.append(el("option", { value: "" }, v.default ? `（不设，默认 ${v.default}）` : "（不设）"));
+    for (const o of opts) input.append(el("option", { value: o }, o));
+    input.value = current;
+  } else {
+    input = el("input", { id: "in-" + v.name, type: v.secret ? "password" : "text", autocomplete: "off", spellcheck: "false",
+      placeholder: v.example ? "例如 " + v.example : v.default ? "不设时默认 " + v.default : "" });
+    input.value = current;
+  }
+  input.addEventListener("input", () => { values[v.name] = input.value; scheduleCheck(); });
+
+  const buttons = [];
+  if (v.secret) {
+    buttons.push(el("button", { type: "button", onclick: (e) => {
+      input.type = input.type === "password" ? "text" : "password";
+      e.target.textContent = input.type === "password" ? "显示" : "隐藏";
+    } }, "显示"));
+  }
+  if (v.generate) {
+    buttons.push(el("button", { type: "button", onclick: async () => {
+      if (input.value && !confirm(`${v.name} 已经有值。\n\n已经部署过的话，换掉它会让已加密的数据读不出来。确定要生成新的吗？`)) return;
+      const { value } = await call("/api/generate?kind=" + encodeURIComponent(v.generate), {});
+      input.value = value; values[v.name] = value; input.type = "text"; scheduleCheck();
+    } }, "生成"));
+  }
+
+  let where = null;
+  if ((v.links && v.links.length) || (v.steps && v.steps.length)) {
+    where = el("details", { class: "where" }, el("summary", {}, (v.links && v.links.length) ? "去哪里拿" : "怎么设置"),
+      v.links && v.links.length ? el("div", {}, ...v.links.map((l, i) => [i ? " · " : "", el("a", { href: l.url, target: "_blank", rel: "noopener noreferrer" }, l.label)])) : null,
+      v.steps && v.steps.length ? el("ol", {}, ...v.steps.map(s => el("li", {}, s))) : null);
+  }
+
+  return el("div", { class: "var", id: "var-" + v.name },
+    el("div", { class: "var-head" },
+      el("span", { class: "var-name mono" }, v.name),
+      el("span", {}, v.title),
+      el("span", { class: "pill optional", id: "pill-" + v.name }, "可选"),
+      v.generate ? el("span", { class: "pill optional" }, "本地生成 · 不要更换") : null,
+      v.legacy ? el("span", { class: "muted", style: "font-size:13px" }, `旧名字 ${v.legacy}`) : null),
+    el("div", { class: "reason", id: "reason-" + v.name }),
+    el("div", { class: "help" }, v.help, v.default && !(v.options && v.options.length) ? `　不设时默认 ${v.default}。` : ""),
+    el("div", { class: "row" }, input, ...buttons),
+    where);
+}
+
+function render(groups) {
+  const root = document.getElementById("groups");
+  root.textContent = "";
+  for (const g of groups) {
+    const list = vars.filter(v => v.group === g);
+    root.append(el("section", { class: "card", id: "group-" + g },
+      el("h2", {}, g, " ", el("span", { class: "muted", style: "font-size:14px;font-weight:400", id: "hidden-" + g })),
+      ...list.map(renderVar)));
+  }
+}
+
+function update(result) {
+  issues = {};
+  for (const i of result.issues || []) issues[i.name] = i;
+  const showAll = document.getElementById("show-advanced").checked;
+  const notApplicable = new Set(result.not_applicable || []);
+  let req = 0, rec = 0;
+  const hiddenPerGroup = {};
+  for (const v of vars) {
+    const issue = issues[v.name], set = (values[v.name] || "").trim() !== "";
+    const pill = document.getElementById("pill-" + v.name), reason = document.getElementById("reason-" + v.name);
+    if (issue) {
+      issue.level === "required" ? req++ : rec++;
+      pill.className = "pill " + issue.level;
+      pill.textContent = issue.level === "required" ? "必填" : "建议";
+      reason.className = "reason " + issue.level;
+      reason.textContent = issue.reason;
+    } else {
+      pill.className = "pill " + (set ? "ok" : "optional");
+      pill.textContent = set ? "已设置" : "可选";
+      reason.textContent = "";
+    }
+    // Settings for choices not made (e.g. SendGrid while using Resend) stay
+    // hidden even with "show all"; a value or an issue always shows.
+    const visible = set || issue || (!notApplicable.has(v.name) && (showAll || !v.advanced));
+    document.getElementById("var-" + v.name).classList.toggle("hidden", !visible);
+    if (!visible) hiddenPerGroup[v.group] = (hiddenPerGroup[v.group] || 0) + 1;
+  }
+  for (const node of document.querySelectorAll("[id^=hidden-]")) {
+    const n = hiddenPerGroup[node.id.slice(7)] || 0;
+    node.textContent = n ? `（另有 ${n} 项和当前选择无关或属于高级设置，已折叠）` : "";
+  }
+  document.getElementById("count-required").textContent = "必填 " + req;
+  document.getElementById("count-recommended").textContent = "建议 " + rec;
+  const startup = document.getElementById("startup");
+  if (!result.startup_checked) {
+    startup.className = "startup";
+    startup.textContent = "API 启动检查：这个项目没有接入启动校验，只检查了下面的规则";
+  } else if (result.startup) {
+    startup.className = "startup bad";
+    startup.textContent = "API 启动检查：不通过，会报错 “" + result.startup + "”";
+  } else {
+    startup.className = "startup good";
+    startup.textContent = "API 启动检查：通过" + (req ? "，但还有必填项（打开的功能会用不了）" : rec ? "，还有一些建议项" : "，可以部署");
+  }
+}
+
+function scheduleCheck() {
+  clearTimeout(checkTimer);
+  checkTimer = setTimeout(async () => {
+    try { update(await call("/api/check", values)); } catch (e) { toast(e.message, true); }
+  }, 250);
+}
+
+function toast(text, bad) {
+  const t = document.getElementById("toast");
+  t.textContent = text;
+  t.style.color = bad ? "var(--red)" : "var(--green)";
+}
+
+document.getElementById("show-advanced").addEventListener("change", () => scheduleCheck());
+
+document.getElementById("preview-btn").addEventListener("click", async () => {
+  const { content } = await call("/api/render", values);
+  document.getElementById("preview").textContent = content;
+  const card = document.getElementById("preview-card");
+  card.classList.remove("hidden");
+  card.scrollIntoView({ behavior: "smooth" });
+});
+
+document.getElementById("save-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("save-btn");
+  if (btn.disabled) return;
+  const req = Object.values(issues).filter(i => i.level === "required").length;
+  if (req && !confirm(`还有 ${req} 个必填项没处理。仍然保存吗？`)) return;
+  btn.disabled = true;
+  try {
+    const res = await call("/api/save", values);
+    update(res.result);
+    const done = document.getElementById("done");
+    done.textContent = "";
+    done.append(el("p", {}, "已写入 ", el("code", {}, res.path), res.backup ? ["，旧文件备份在 ", el("code", {}, res.backup), "（里面也有密钥，确认没问题后删掉）"] : "", "。"),
+      nextSteps ? el("p", {}, "下一步：" + nextSteps) : "");
+    document.getElementById("done-card").classList.remove("hidden");
+    document.getElementById("done-card").scrollIntoView({ behavior: "smooth" });
+    toast("已保存");
+  } catch (e) { toast("保存失败：" + e.message, true); }
+  finally { if (!blocked) btn.disabled = false; }
+});
+
+(async () => {
+  try {
+    const st = await call("/api/state");
+    vars = st.vars; values = st.values; nextSteps = st.next_steps || "";
+    if (st.title) {
+      document.getElementById("title").textContent = st.title;
+      document.title = st.title;
+    }
+    if (st.notes && st.notes.length) {
+      document.getElementById("notes").append(...st.notes.map(n => el("li", {}, n)));
+      document.getElementById("notes-card").classList.remove("hidden");
+    }
+    document.getElementById("path").textContent = st.path;
+    document.getElementById("newfile").classList.toggle("hidden", st.exists);
+    document.getElementById("intro").open = !st.exists;
+    if (st.problems && st.problems.length) {
+      blocked = true;
+      document.getElementById("save-btn").disabled = true;
+      document.getElementById("problems").append(...st.problems.map(p => el("li", {}, p)));
+      document.getElementById("problems-card").classList.remove("hidden");
+    }
+    if (st.unknown && st.unknown.length) {
+      document.getElementById("unknown").textContent = st.unknown.sort().join(", ");
+      document.getElementById("unknown-card").classList.remove("hidden");
+    }
+    render(st.groups);
+    update(st.result);
+  } catch (e) {
+    document.getElementById("startup").textContent = "加载失败：" + e.message;
+    document.getElementById("startup").className = "startup bad";
+  }
+})();
+</script>
+</body>
+</html>

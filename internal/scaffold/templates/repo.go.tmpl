@@ -1,0 +1,15 @@
+package {{.Package}}
+
+import (
+	"context"
+	"time"
+)
+
+// Repo is the persistence capability required by this module's service.
+type Repo interface {
+	Create(context.Context, {{.Type}}) error
+	Get(context.Context, string) ({{.Type}}, error)
+	List(context.Context, ListParams) (items []{{.Type}}, total int64, err error)
+	Update(ctx context.Context, id, name string, updatedAt time.Time) ({{.Type}}, error)
+	Delete(context.Context, string) error
+}

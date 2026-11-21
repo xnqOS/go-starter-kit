@@ -1,0 +1,13 @@
+package example
+
+import "github.com/gin-gonic/gin"
+
+// RegisterRoutes receives an assembled service and only declares HTTP routes.
+func RegisterRoutes(group *gin.RouterGroup, service *Service) {
+	h := NewHandler(service)
+	group.POST("", h.Create)
+	group.GET("", h.List)
+	group.GET("/:id", h.Get)
+	group.PUT("/:id", h.Update)
+	group.DELETE("/:id", h.Delete)
+}

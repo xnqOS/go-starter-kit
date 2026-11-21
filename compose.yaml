@@ -1,0 +1,33 @@
+services:
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.52.0
+    profiles: ["logging"]
+    command:
+      - "-storageDataPath=/victoria-logs-data"
+      - "-retentionPeriod=14d"
+      - "-syslog.listenAddr.tcp=:5140"
+    ports:
+      - "127.0.0.1:9428:9428"
+      - "127.0.0.1:5140:5140"
+    volumes:
+      - logs_data:/victoria-logs-data
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: starter
+      POSTGRES_USER: starter
+      POSTGRES_PASSWORD: starter
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U starter -d starter"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  postgres_data:
+  logs_data:
