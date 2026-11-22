@@ -21,8 +21,8 @@ kit 在子目录里，所以 tag 要带目录前缀：
 
 ```sh
 # PR 合并到 main 之后
-git tag kit/v0.1.0
-git push origin kit/v0.1.0
+git tag kit/v0.1.1
+git push origin kit/v0.1.1
 ```
 
 发布后，把模板 `go.mod` 里 `require github.com/xnqOS/go-starter-kit/kit` 的版本改成刚打的 tag。`make init` 导出的项目会用这个版本，所以它必须是已经推送的 tag。

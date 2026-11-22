@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/gin-gonic/gin v1.12.0
-	github.com/xnqOS/go-starter-kit/kit v0.1.0
+	github.com/xnqOS/go-starter-kit/kit v0.1.1
 	gorm.io/gorm v1.31.1
 )
 

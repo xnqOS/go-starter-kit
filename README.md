@@ -256,6 +256,6 @@ git remote add origin https://github.com/YOUR_NAME/go-starter-kit.git
 git push -u origin main
 ```
 
-提交前核对暂存文件。本地环境文件、数据和证书目录已有忽略规则。公开复用前请补充你选择的 `LICENSE`；初始化导出会保留常见名称的许可文件。
+提交前核对暂存文件。本地环境文件、数据和证书目录已有忽略规则。本仓库使用 [MIT 许可证](LICENSE)。初始化导出会保留常见名称的许可文件；新项目如果不打算以 MIT 发布自己的代码，导出后修改或替换 `LICENSE`（保留模板代码原有的版权声明即可）。
 
 参考：[GORM 迁移](https://gorm.io/docs/migration.html)、[GORM 连接数据库](https://gorm.io/docs/connecting_to_the_database.html)、[Gin 测试文档](https://gin-gonic.com/en/docs/testing/)、[Go 服务项目目录建议](https://go.dev/doc/modules/layout#server-project)。
