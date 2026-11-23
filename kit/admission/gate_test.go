@@ -12,7 +12,7 @@ import (
 func waitForQueue(t *testing.T, g *Gate) {
 	t.Helper()
 	deadline := time.After(time.Second)
-	for len(g.waiting) == 0 {
+	for g.Waiting() == 0 {
 		select {
 		case <-deadline:
 			t.Fatal("request did not enter the queue")
@@ -75,5 +75,30 @@ func TestGateTimesOutAndZeroQueueRefuses(t *testing.T) {
 	defer free()
 	if _, err := z.Acquire(context.Background()); !errors.Is(err, apperror.ErrUnavailable) {
 		t.Fatalf("zero queue: %v", err)
+	}
+}
+
+func TestGateReportsWaitingAndInUse(t *testing.T) {
+	g := New(1, 1, time.Second)
+	release, err := g.Acquire(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		free, err := g.Acquire(context.Background())
+		if err == nil {
+			free()
+		}
+		close(done)
+	}()
+	waitForQueue(t, g)
+	if g.InUse() != 1 || g.Waiting() != 1 {
+		t.Fatalf("InUse=%d Waiting=%d, want 1 and 1", g.InUse(), g.Waiting())
+	}
+	release()
+	<-done
+	if g.InUse() != 0 || g.Waiting() != 0 {
+		t.Fatalf("InUse=%d Waiting=%d after release, want 0 and 0", g.InUse(), g.Waiting())
 	}
 }

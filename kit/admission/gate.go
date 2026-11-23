@@ -61,6 +61,13 @@ func (g *Gate) Acquire(ctx context.Context) (release func(), err error) {
 	}
 }
 
+// Waiting reports how many callers are queued for a slot right now, for
+// metrics and for tests that need to know a caller has started waiting.
+func (g *Gate) Waiting() int { return len(g.waiting) }
+
+// InUse reports how many slots are held right now.
+func (g *Gate) InUse() int { return len(g.slots) }
+
 // Do runs fn while holding a slot.
 func (g *Gate) Do(ctx context.Context, fn func() error) error {
 	release, err := g.Acquire(ctx)
